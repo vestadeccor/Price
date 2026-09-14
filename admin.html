@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>پنل مدیریت قیمت | وستا دکور</title>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --navy:#0d1b3d; --gold:#d4a94f; --gold-light:#e8c874; --paper:#f7f5f0; --text:#1a1a2e; --muted:#6b7280; --line:#e5e0d5; --green:#1e8e5a; }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:'Vazirmatn',sans-serif; background:var(--paper); color:var(--text); padding-bottom:60px;}
+  .wrap{max-width:680px; margin:0 auto; padding:14px 10px;}
+  h1{color:var(--navy); font-size:1.15rem; text-align:center; margin-bottom:14px;}
+  .lock{text-align:center; padding:70px 20px 20px;}
+  .lock input{width:100%; max-width:260px; padding:12px 16px; border-radius:12px; border:1px solid var(--line); background:#fff; color:var(--text); font-family:inherit; font-size:1rem; text-align:center; margin:14px 0;}
+  .lock button{padding:11px 30px; border:none; border-radius:12px; font-family:inherit; font-weight:700; color:#fff; background:var(--navy); cursor:pointer; font-size:.95rem;}
+  .err{color:#c0392b; font-size:.82rem; min-height:20px; margin-top:4px;}
+  .hidden{display:none;}
+  .tabs{display:flex; gap:6px; background:#fff; border:1px solid var(--line); border-radius:12px; padding:4px; margin-bottom:14px;}
+  .tab{flex:1; text-align:center; padding:9px 6px; border-radius:9px; cursor:pointer; font-weight:700; color:var(--muted); font-size:.85rem;}
+  .tab.active{background:var(--navy); color:var(--gold-light);}
+  .cat{background:#fff; border:1px solid var(--line); border-radius:12px; margin-bottom:12px; overflow:hidden;}
+  .cat-head{background:var(--navy); color:#fff; font-weight:700; font-size:.88rem; padding:9px 12px; display:flex; justify-content:space-between; align-items:center;}
+  .cat-head input{background:transparent; border:none; color:#fff; font-family:inherit; font-weight:700; font-size:.88rem; width:60%;}
+  .row{display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid var(--line);}
+  .row:last-child{border-bottom:none;}
+  .row input{border:1px solid var(--line); border-radius:8px; padding:7px 8px; font-family:inherit; font-size:.8rem; background:#fbfaf7;}
+  .row .n{flex:2; min-width:0;}
+  .row .d{flex:1.3; min-width:0;}
+  .row .p{flex:1.2; min-width:0; text-align:center;}
+  .row button{border:none; background:#fdeaea; color:#c0392b; border-radius:8px; padding:6px 8px; cursor:pointer; font-size:.85rem;}
+  .addItem, .addCat{width:100%; padding:9px; border:1px dashed var(--gold); background:#fffdf7; color:var(--navy); border-radius:10px; font-family:inherit; font-weight:700; cursor:pointer; margin-top:4px; font-size:.82rem;}
+  .toolbar{display:flex; gap:8px; margin:16px 0;}
+  .toolbar button{flex:1; padding:13px; border:none; border-radius:12px; font-family:inherit; font-weight:800; cursor:pointer; font-size:.9rem;}
+  .save-btn{background:var(--green); color:#fff;}
+  .seed-btn{background:#fff; color:var(--navy); border:1px solid var(--line) !important;}
+  .status{text-align:center; font-size:.85rem; margin-top:8px; min-height:20px; font-weight:700;}
+  .status.ok{color:var(--green);}
+  .status.err{color:#c0392b;}
+  .hint{background:#fff; border:1px solid var(--line); border-radius:12px; padding:12px; font-size:.78rem; color:var(--muted); margin-bottom:14px; line-height:1.9;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>پنل مدیریت قیمت وستا دکور</h1>
+
+  <div id="lockScreen" class="lock">
+    <div style="font-weight:800; font-size:1.1rem; color:var(--navy);">🔒 ورود مدیر</div>
+    <input type="password" id="adminPw" placeholder="رمز عبور">
+    <div class="err" id="adminErr"></div>
+    <button onclick="checkAdminPw()">ورود</button>
+  </div>
+
+  <div id="panel" class="hidden">
+    <div class="hint">
+      قیمت‌ها رو تغییر بده و روی «ذخیره تغییرات» بزن. تغییرات فوراً روی سایت اصلی نمایش داده میشه.
+      برای اضافه/حذف کردن محصول یا دسته از دکمه‌های مربوطه استفاده کن.
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" id="tabRetail" onclick="switchTab('retail')">لیست مصرف‌کننده</div>
+      <div class="tab" id="tabPartner" onclick="switchTab('partner')">لیست همکاران</div>
+    </div>
+
+    <div id="editorArea"></div>
+    <button class="addCat" onclick="addCategory()">+ افزودن دسته جدید</button>
+
+    <div class="toolbar">
+      <button class="save-btn" onclick="saveData()">ذخیره تغییرات</button>
+      <button class="seed-btn" onclick="seedIfEmpty()">بارگذاری اولیه نمونه</button>
+    </div>
+    <div class="status" id="statusMsg"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBd3PryiAu0Xhf8pP9jFLVzm4FNk7bcPsw",
+  authDomain: "price-list-63946.firebaseapp.com",
+  projectId: "price-list-63946",
+  storageBucket: "price-list-63946.firebasestorage.app",
+  messagingSenderId: "694842607377",
+  appId: "1:694842607377:web:3b1314018b45910ef86eb0"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const ADMIN_PASSWORD = "vesta-admin-1404"; // این رمز رو همینجا عوض کن
+
+const seedRetail = [
+  { cat:"دیوارپوش", items:[
+    {n:"دیوارپوش فومی ساده", d:"70×70 - 70×77", p:305000},
+    {n:"دیوارپوش فومی چاپی", d:"70×70 - 70×77", p:325000},
+    {n:"دیوارپوش فومی وارداتی", d:"70×70 - 70×77", p:305000},
+    {n:"دیوارپوش فوم ماربل", d:"60×60", p:220000},
+    {n:"دیوارپوش فومی رولی", d:"280×70", p:1020000},
+    {n:"لمسه پشت چسبدار", d:"47×47", p:310000},
+    {n:"نوار لمسه", d:"طلایی و نقره‌ای", p:400000},
+  ]},
+  { cat:"ماربل شیت 60×120", items:[
+    {n:"ماربل شیت", d:"", p:690000},
+    {n:"ماربل شیت سری N , 17", d:"", p:740000},
+    {n:"ماربل شیت سری CIP , VIP", d:"", p:905000},
+  ]},
+  { cat:"ماربل شیت 280×120", items:[
+    {n:"ماربل شیت", d:"", p:3050000},
+    {n:"ماربل شیت سری N , 17", d:"", p:3280000},
+    {n:"ماربل شیت سری CIP , VIP", d:"", p:3680000},
+    {n:"ماربل بوک مچ ANG", d:"", p:10000000},
+    {n:"ماربل ANG (کدهای معمولی و 500)", d:"", p:4400000},
+    {n:"ماربل ANG (کدهای 300 و 600)", d:"", p:5050000},
+    {n:"هزینه بسته‌بندی ماربل", d:"", p:500000},
+  ]},
+  { cat:"ترمووال", items:[
+    {n:"ترمووال PVC", d:"20×280", p:580000},
+    {n:"ترمووال PVC مغزی روشن", d:"20×280", p:620000},
+    {n:"ترمووال لاینر", d:"17×280", p:800000},
+    {n:"ترمووال لاینر سافت‌تاچ", d:"17×280", p:1000000},
+    {n:"ترمووال آکوستیک", d:"50×280", p:1600000},
+  ]},
+  { cat:"کفپوش", items:[
+    {n:"طرح سنگ (تایلی)", d:"60×60", p:410000, unit:"تایلی"},
+    {n:"طرح پارکت (کارتنی)", d:"120×20 - هر کارتن ۳.۶۰ متر مربع", p:4024000, unit:"کارتنی"},
+  ]},
+  { cat:"قرنیز", items:[
+    {n:"قرنیز ساده", d:"۹ سانتی", p:319000},
+    {n:"قرنیز مدرن", d:"۹ سانتی", p:413000},
+    {n:"قرنیز مدرن", d:"۱۰ سانتی", p:790000},
+  ]},
+  { cat:"چسب‌ها", items:[
+    {n:"چسب ماربل شیت", d:"", p:250000},
+    {n:"چسب سوسیسی", d:"", p:1150000},
+    {n:"چسب اسپری", d:"", p:270000},
+    {n:"چسب خمیری ۴ کیلویی", d:"", p:1800000},
+    {n:"چسب خمیری ۱۰ کیلویی", d:"", p:4500000},
+  ]},
+];
+
+let state = { retail: [], partner: [] };
+let activeTab = 'retail';
+
+window.checkAdminPw = function(){
+  const val = document.getElementById('adminPw').value;
+  if(val === ADMIN_PASSWORD){
+    document.getElementById('lockScreen').classList.add('hidden');
+    document.getElementById('panel').classList.remove('hidden');
+    loadData();
+  } else {
+    document.getElementById('adminErr').textContent = 'رمز اشتباه است';
+  }
+};
+document.getElementById('adminPw').addEventListener('keyup', e => { if(e.key==='Enter') checkAdminPw(); });
+
+async function loadData(){
+  for(const tab of ['retail','partner']){
+    const snap = await getDoc(doc(db,"priceLists",tab));
+    state[tab] = snap.exists() ? (snap.data().categories || []) : [];
+  }
+  render();
+}
+
+function render(){
+  const data = state[activeTab];
+  const area = document.getElementById('editorArea');
+  if(!data.length){
+    area.innerHTML = '<div class="hint">داده‌ای وجود نداره. برای شروع سریع روی «بارگذاری اولیه نمونه» بزن یا دسته جدید اضافه کن.</div>';
+    return;
+  }
+  area.innerHTML = data.map((sec, ci) => `
+    <div class="cat">
+      <div class="cat-head">
+        <input value="${sec.cat}" onchange="updateCatName(${ci}, this.value)">
+        <button onclick="removeCategory(${ci})" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:5px 8px; cursor:pointer;">حذف دسته</button>
+      </div>
+      ${sec.items.map((it, ii) => `
+        <div class="row">
+          <input class="n" value="${it.n}" placeholder="نام محصول" onchange="updateItem(${ci},${ii},'n',this.value)">
+          <input class="d" value="${it.d||''}" placeholder="سایز" onchange="updateItem(${ci},${ii},'d',this.value)">
+          <input class="p" type="number" value="${it.p}" placeholder="قیمت" onchange="updateItem(${ci},${ii},'p',this.value)">
+          <button onclick="removeItem(${ci},${ii})">✕</button>
+        </div>
+      `).join('')}
+      <button class="addItem" onclick="addItem(${ci})">+ افزودن محصول</button>
+    </div>
+  `).join('');
+}
+
+window.switchTab = function(tab){
+  activeTab = tab;
+  document.getElementById('tabRetail').classList.toggle('active', tab==='retail');
+  document.getElementById('tabPartner').classList.toggle('active', tab==='partner');
+  document.getElementById('statusMsg').textContent = '';
+  render();
+};
+
+window.updateCatName = (ci, val) => { state[activeTab][ci].cat = val; };
+window.updateItem = (ci, ii, field, val) => {
+  state[activeTab][ci].items[ii][field] = field==='p' ? Number(val) : val;
+};
+window.removeItem = (ci, ii) => { state[activeTab][ci].items.splice(ii,1); render(); };
+window.removeCategory = (ci) => { if(confirm('این دسته حذف بشه؟')){ state[activeTab].splice(ci,1); render(); } };
+window.addItem = (ci) => { state[activeTab][ci].items.push({n:'محصول جدید', d:'', p:0}); render(); };
+window.addCategory = () => { state[activeTab].push({cat:'دسته جدید', items:[{n:'محصول جدید', d:'', p:0}]}); render(); };
+
+window.saveData = async function(){
+  const statusEl = document.getElementById('statusMsg');
+  statusEl.textContent = 'در حال ذخیره...'; statusEl.className='status';
+  try{
+    await setDoc(doc(db,"priceLists",activeTab), { categories: state[activeTab] });
+    statusEl.textContent = 'ذخیره شد ✓'; statusEl.className='status ok';
+  }catch(e){
+    statusEl.textContent = 'خطا در ذخیره: ' + e.message; statusEl.className='status err';
+  }
+};
+
+window.seedIfEmpty = async function(){
+  if(state[activeTab].length){
+    if(!confirm('داده فعلی این تب پاک و با نمونه اولیه جایگزین بشه؟')) return;
+  }
+  state[activeTab] = JSON.parse(JSON.stringify(seedRetail));
+  render();
+  await saveData();
+};
+</script>
+</body>
+</html>
