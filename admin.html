@@ -44,6 +44,10 @@
   .upload-btn{display:inline-block; padding:6px 10px; border:1px dashed var(--gold); border-radius:8px; font-size:.75rem; color:var(--navy); cursor:pointer; background:#fffdf7;}
   .upload-btn input{display:none;}
   .addItem, .addCat{width:100%; padding:9px; border:1px dashed var(--gold); background:#fffdf7; color:var(--navy); border-radius:10px; font-family:inherit; font-weight:700; cursor:pointer; margin-top:4px; font-size:.82rem;}
+  .move-btns{display:flex; flex-direction:column; gap:2px;}
+  .move-btns button{border:1px solid var(--line); background:#fff; color:var(--navy); border-radius:6px; width:22px; height:20px; font-size:.65rem; cursor:pointer; line-height:1; padding:0;}
+  .move-btns button:disabled{opacity:.3; cursor:default;}
+  .cat-head .move-btns button{border-color:rgba(255,255,255,.3); background:rgba(255,255,255,.1); color:#fff;}
   .toolbar{display:flex; gap:8px; margin:16px 0;}
   .toolbar button{flex:1; padding:13px; border:none; border-radius:12px; font-family:inherit; font-weight:800; cursor:pointer; font-size:.9rem;}
   .save-btn{background:var(--green); color:#fff;}
@@ -250,13 +254,23 @@ function renderCatalog(){
     <div class="cat">
       <div class="cat-head">
         <input value="${sec.cat}" onchange="updateCatalogCatName(${ci}, this.value)">
-        <button onclick="removeCatalogCategory(${ci})" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:5px 8px; cursor:pointer;">حذف دسته</button>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <div class="move-btns">
+            <button onclick="moveCatalogCategory(${ci},-1)" ${ci===0?'disabled':''}>▲</button>
+            <button onclick="moveCatalogCategory(${ci},1)" ${ci===catalogState.length-1?'disabled':''}>▼</button>
+          </div>
+          <button onclick="removeCatalogCategory(${ci})" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:5px 8px; cursor:pointer;">حذف دسته</button>
+        </div>
       </div>
       ${sec.items.map((it, ii) => `
         <div class="prod-block">
           <div class="prod-top">
             <input class="n" value="${it.n||''}" placeholder="نام محصول" onchange="updateCatalogField(${ci},${ii},'n',this.value)">
             <input class="d" value="${it.d||''}" placeholder="سایز/ابعاد" onchange="updateCatalogField(${ci},${ii},'d',this.value)">
+            <div class="move-btns">
+              <button onclick="moveCatalogItem(${ci},${ii},-1)" ${ii===0?'disabled':''}>▲</button>
+              <button onclick="moveCatalogItem(${ci},${ii},1)" ${ii===sec.items.length-1?'disabled':''}>▼</button>
+            </div>
             <button onclick="removeCatalogItem(${ci},${ii})">✕</button>
           </div>
           <textarea class="prod-desc" placeholder="توضیحات محصول" onchange="updateCatalogField(${ci},${ii},'desc',this.value)">${it.desc||''}</textarea>
