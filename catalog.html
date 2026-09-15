@@ -94,27 +94,20 @@
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBd3PryiAu0Xhf8pP9jFLVzm4FNk7bcPsw",
-  authDomain: "price-list-63946.firebaseapp.com",
-  projectId: "price-list-63946",
-  storageBucket: "price-list-63946.firebasestorage.app",
-  messagingSenderId: "694842607377",
-  appId: "1:694842607377:web:3b1314018b45910ef86eb0"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const SUPABASE_URL = "https://nptrvsxapqgizmqderku.supabase.co";
+const SUPABASE_KEY = "sb_publishable_p3FDPQ8r20qMuIO3eOqF_Q_ZchbiXG3";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let categories = [];
 let activeCat = 'همه';
 
 async function loadData(){
   try{
-    const snap = await getDoc(doc(db,"catalogProducts","main"));
-    categories = snap.exists() ? (snap.data().categories || []) : [];
+    const { data, error } = await supabase.from('catalog_products').select('categories').eq('id','main').single();
+    if(error) throw error;
+    categories = (data && data.categories) || [];
   }catch(e){
     document.getElementById('content').innerHTML = '<div class="empty">خطا در بارگذاری کاتالوگ</div>';
     return;

@@ -124,21 +124,13 @@
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBd3PryiAu0Xhf8pP9jFLVzm4FNk7bcPsw",
-  authDomain: "price-list-63946.firebaseapp.com",
-  projectId: "price-list-63946",
-  storageBucket: "price-list-63946.firebasestorage.app",
-  messagingSenderId: "694842607377",
-  appId: "1:694842607377:web:3b1314018b45910ef86eb0"
-};
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+const SUPABASE_URL = "https://nptrvsxapqgizmqderku.supabase.co";
+const SUPABASE_KEY = "sb_publishable_p3FDPQ8r20qMuIO3eOqF_Q_ZchbiXG3";
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-const PARTNER_PASSWORD = "11112222"; // این رمز رو تو پنل مدیریت هم می‌تونی عوض کنی
+const PARTNER_PASSWORD = "vesta1404"; // این رمز رو تو پنل مدیریت هم می‌تونی عوض کنی
 
 let retailData = [];
 let partnerData = [];
@@ -178,15 +170,20 @@ function renderPartnerIfUnlocked(){
   }
 }
 
-onSnapshot(doc(db,"priceLists","retail"), (snap) => {
-  retailData = snap.exists() ? (snap.data().categories || []) : [];
+async function loadPrices(){
+  const { data: retailRow } = await supabase.from('price_lists').select('categories').eq('id','retail').single();
+  retailData = (retailRow && retailRow.categories) || [];
   renderRetail();
   document.getElementById('lastUpdated').textContent = 'آخرین به‌روزرسانی: ' + new Date().toLocaleDateString('fa-IR');
-});
-onSnapshot(doc(db,"priceLists","partner"), (snap) => {
-  partnerData = snap.exists() ? (snap.data().categories || []) : [];
+
+  const { data: partnerRow } = await supabase.from('price_lists').select('categories').eq('id','partner').single();
+  partnerData = (partnerRow && partnerRow.categories) || [];
   renderPartnerIfUnlocked();
-});
+}
+loadPrices();
+
+// polling refresh every 60s so updates from admin panel show up without reload
+setInterval(loadPrices, 60000);
 
 window.showTab = function(tab){
   activeTab = tab;
