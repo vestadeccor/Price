@@ -183,13 +183,23 @@ function renderPrice(){
     <div class="cat">
       <div class="cat-head">
         <input value="${sec.cat}" onchange="updateCatName(${ci}, this.value)">
-        <button onclick="removeCategory(${ci})" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:5px 8px; cursor:pointer;">حذف دسته</button>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <div class="move-btns">
+            <button onclick="moveCategory(${ci},-1)" ${ci===0?'disabled':''}>▲</button>
+            <button onclick="moveCategory(${ci},1)" ${ci===data.length-1?'disabled':''}>▼</button>
+          </div>
+          <button onclick="removeCategory(${ci})" style="background:rgba(255,255,255,.15); color:#fff; border:none; border-radius:8px; padding:5px 8px; cursor:pointer;">حذف دسته</button>
+        </div>
       </div>
       ${sec.items.map((it, ii) => `
         <div class="row">
           <input class="n" value="${it.n}" placeholder="نام محصول" onchange="updateItem(${ci},${ii},'n',this.value)">
           <input class="d" value="${it.d||''}" placeholder="سایز" onchange="updateItem(${ci},${ii},'d',this.value)">
           <input class="p" type="number" value="${it.p}" placeholder="قیمت" onchange="updateItem(${ci},${ii},'p',this.value)">
+          <div class="move-btns">
+            <button onclick="moveItem(${ci},${ii},-1)" ${ii===0?'disabled':''}>▲</button>
+            <button onclick="moveItem(${ci},${ii},1)" ${ii===sec.items.length-1?'disabled':''}>▼</button>
+          </div>
           <button onclick="removeItem(${ci},${ii})">✕</button>
         </div>
       `).join('')}
@@ -214,6 +224,20 @@ window.removeItem = (ci, ii) => { state[activeTab][ci].items.splice(ii,1); rende
 window.removeCategory = (ci) => { if(confirm('این دسته حذف بشه؟')){ state[activeTab].splice(ci,1); renderPrice(); } };
 window.addItem = (ci) => { state[activeTab][ci].items.push({n:'محصول جدید', d:'', p:0}); renderPrice(); };
 window.addCategory = () => { state[activeTab].push({cat:'دسته جدید', items:[{n:'محصول جدید', d:'', p:0}]}); renderPrice(); };
+window.moveCategory = (ci, dir) => {
+  const arr = state[activeTab];
+  const ni = ci + dir;
+  if(ni < 0 || ni >= arr.length) return;
+  [arr[ci], arr[ni]] = [arr[ni], arr[ci]];
+  renderPrice();
+};
+window.moveItem = (ci, ii, dir) => {
+  const items = state[activeTab][ci].items;
+  const ni = ii + dir;
+  if(ni < 0 || ni >= items.length) return;
+  [items[ii], items[ni]] = [items[ni], items[ii]];
+  renderPrice();
+};
 
 window.saveData = async function(){
   const statusEl = document.getElementById('statusMsg');
@@ -297,6 +321,19 @@ window.removeCatalogCategory = (ci) => { if(confirm('این دسته حذف بش
 window.addCatalogItem = (ci) => { catalogState[ci].items.push({n:'محصول جدید', d:'', desc:'', imgs:[]}); renderCatalog(); };
 window.addCatalogCategory = () => { catalogState.push({cat:'دسته جدید', items:[]}); renderCatalog(); };
 window.removeCatalogImg = (ci, ii, imi) => { catalogState[ci].items[ii].imgs.splice(imi,1); renderCatalog(); };
+window.moveCatalogCategory = (ci, dir) => {
+  const ni = ci + dir;
+  if(ni < 0 || ni >= catalogState.length) return;
+  [catalogState[ci], catalogState[ni]] = [catalogState[ni], catalogState[ci]];
+  renderCatalog();
+};
+window.moveCatalogItem = (ci, ii, dir) => {
+  const items = catalogState[ci].items;
+  const ni = ii + dir;
+  if(ni < 0 || ni >= items.length) return;
+  [items[ii], items[ni]] = [items[ni], items[ii]];
+  renderCatalog();
+};
 
 window.uploadCatalogImgs = async function(ci, ii, files){
   const statusEl = document.getElementById(`uploadStatus-${ci}-${ii}`);
